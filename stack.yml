@@ -1,0 +1,28 @@
+version: '3.1'
+
+services:
+  builder:
+    build: .
+    image: scp/crawl
+    command: echo "ok"
+
+  run:
+    image: scp/crawl
+    volumes:
+      - type: bind
+        source: ./src
+        target: /src
+      - type: bind
+        source: ./output
+        target: /output
+
+  crawl:
+    image: scp/crawl
+    command: "python /src/crawl.py --debug http://${input}.wikidot.com --dump /output/${output}"
+    volumes:
+      - type: bind
+        source: ./src
+        target: /src
+      - type: bind
+        source: ./output
+        target: /output

@@ -30,8 +30,8 @@ class Wikidot:
 		params['wikidot_token7'] = token
 	
 		if self.debug:
-			print params
-			print cookies
+			print (params)
+			print (cookies)
 
 		self._wait_request_slot()
 		req = requests.request('POST', self.site+'/ajax-module-connector.php', data=params, cookies=cookies)
@@ -39,7 +39,7 @@ class Wikidot:
 		if json['status'] == 'ok':
 			return json['body'], (json['title'] if 'title' in json else '')
 		else:
-			raise req.text
+			raise Exception(req.text)
 
 	# Same but only returns the body, most responses don't have titles
 	def query(self, params):
@@ -189,5 +189,5 @@ class Wikidot:
 		  'rev_id': rev_id,
 		  'unixname': unixname,
 		  'title': res[1],
-		  'content': unicode(soup), # only content remains
+		  'content': str(soup), # only content remains
 		}

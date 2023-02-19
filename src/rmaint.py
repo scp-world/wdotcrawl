@@ -2,7 +2,12 @@ import os
 import codecs
 from mercurial import commands, ui, hg
 import hgpatch
-import cPickle as pickle
+
+try:
+  import cPickle as pickle
+except:
+  import pickle
+  
 import wikidot
 
 # Repository builder and maintainer
@@ -60,19 +65,19 @@ class RepoMaintainer:
 	#
 	def buildRevisionList(self, pages = None, depth = 10000):
 		if os.path.isfile(self.path+'\\.wrevs'):
-			print "Loading cached revision list..."
+			print ("Loading cached revision list...")
 			self.loadWRevs()
 		else:
-			print "Building revision list..."
+			print ("Building revision list...")
 			if not pages:
 				pages = self.wd.list_pages(10000)
 			self.wrevs = []
 			for page in pages:
-				print "Querying page: "+page
+				print ("Querying page: "+page)
 				page_id = self.wd.get_page_id(page)
-				print "ID: "+str(page_id)
+				print ("ID: "+str(page_id))
 				revs = self.wd.get_revisions(page_id, depth)
-				print "Revisions: "+str(len(revs))
+				print ("Revisions: "+str(len(revs)))
 				for rev in revs:
 					self.wrevs.append({
 					  'page_id' : page_id,
@@ -83,20 +88,20 @@ class RepoMaintainer:
 					  'comment' : rev['comment'],
 					})
 			self.saveWRevs() # Save a cached copy
-			print ""
+			print ("")
 		
 		
-		print "Total revisions: "+str(len(self.wrevs))
+		print ("Total revisions: "+str(len(self.wrevs)))
 		
-		print "Sorting revisions..."
+		print ("Sorting revisions...")
 		self.wrevs.sort(key=lambda rev: rev['date'])
-		print ""
+		print ("")
 		
 		if self.debug:
-			print "Revision list: "
+			print ("Revision list: ")
 			for rev in self.wrevs:
-				print str(rev)+"\n"
-			print ""
+				print (str(rev)+"\n")
+			print ("")
 
 
 	#
@@ -126,27 +131,28 @@ class RepoMaintainer:
 	# and restores its construction state.
 	#
 	def openRepo(self):
-		# Create a new repository or continue from aborted dump
+		# # Create a new repository or continue from aborted dump
 		self.ui=ui.ui()
 		self.last_names = {} # Tracks page renames: name atm -> last name in repo
 		self.last_parents = {} # Tracks page parent names: name atm -> last parent in repo
 		
 		if os.path.isfile(self.path+'\\.wstate'):
-			print "Continuing from aborted dump state..."
+			print ("Continuing from aborted dump state...")
 			self.loadState()
-			self.repo = hg.repository(self.ui, self.path)
+		# 	self.repo = hg.repository(self.ui, self.path)
 		
 		else: # create a new repository (will fail if one exists)
-			print "Initializing repository..."
-			commands.init(self.ui, self.path)
-			self.repo = hg.repository(self.ui, self.path)
+			print ("Initializing repository...")
+		# 	commands.init(self.ui, self.path)
+			# self.repo = hg.repository(self.ui, self.path)
 			self.rev_no = 0
 			
 			if self.storeRevIds:
-				# Add revision id file to the new repo
-				fname = self.path+'\\.revid'
-				codecs.open(fname, "w", "UTF-8").close()
-				commands.add(self.ui, self.repo, str(fname))
+		 		# Add revision id file to the new repo
+		 		fname = self.path+'\\.revid'
+		 		codecs.open(fname, "w", "UTF-8").close()
+		# 		commands.add(self.ui, self.repo, str(fname))
+		pass
 	
 	
 	#
@@ -159,7 +165,7 @@ class RepoMaintainer:
 			
 		rev = self.wrevs[self.rev_no]
 		source = self.wd.get_revision_source(rev['rev_id'])
-		# Page title and unix_name changes are only available through another request:
+		# # Page title and unix_name changes are only available through another request:
 		details = self.wd.get_revision_version(rev['rev_id'])
 		
 		# Store revision_id for last commit
@@ -173,8 +179,8 @@ class RepoMaintainer:
 		unixname = rev['page_name']
 		rev_unixname = details['unixname'] # may be different in revision than atm
 		
-		# Unfortunately, there's no exposed way in Wikidot to see page breadcrumbs at any point in history.
-		# The only way to know they were changed is revision comments, though evil people may trick us.
+		# # Unfortunately, there's no exposed way in Wikidot to see page breadcrumbs at any point in history.
+		# # The only way to know they were changed is revision comments, though evil people may trick us.
 		if rev['comment'].startswith('Parent page set to: "'):
 			# This is a parenting revision, remember the new parent
 			parent_unixname = rev['comment'][21:-2]
@@ -185,10 +191,10 @@ class RepoMaintainer:
 		# There are also problems when parent page gets renamed -- see updateChildren
 		
 		# If the page is tracked and its name just changed, tell HG
-		rename = (unixname in self.last_names) and (self.last_names[unixname] <> rev_unixname)
+		rename = (unixname in self.last_names) and (self.last_names[unixname] != rev_unixname)
 		if rename:
 			self.updateChildren(self.last_names[unixname], rev_unixname) # Update children which reference us -- see comments there
-			commands.rename(self.ui, self.repo, self.path+'\\'+str(self.last_names[unixname])+'.txt', self.path+'\\'+str(rev_unixname)+'.txt')
+		# 	commands.rename(self.ui, self.repo, self.path+'\\'+str(self.last_names[unixname])+'.txt', self.path+'\\'+str(rev_unixname)+'.txt')
 		
 		# Ouput contents
 		fname = self.path+'\\'+rev_unixname+'.txt'
@@ -200,14 +206,14 @@ class RepoMaintainer:
 		outp.write(source)
 		outp.close()
 		
-		# Add new page
-		if not unixname in self.last_names: # never before seen
-			commands.add(self.ui, self.repo, str(fname))
+		# # Add new page
+		# if not unixname in self.last_names: # never before seen
+		# 	commands.add(self.ui, self.repo, str(fname))
 
 		self.last_names[unixname] = rev_unixname
 
-		# Commit
-		if rev['comment'] <> '':
+		# # Commit
+		if rev['comment'] != '':
 			commit_msg = rev_unixname + ': ' + rev['comment']
 		else:
 			commit_msg = rev_unixname
@@ -215,9 +221,9 @@ class RepoMaintainer:
 			commit_date = str(rev['date']) + ' 0'
 		else:
 			commit_date = None
-		print "Commiting: "+str(self.rev_no)+'. '+commit_msg
+		print ("Commiting: "+str(self.rev_no)+'. '+commit_msg)
 
-		commands.commit(self.ui, self.repo, message=commit_msg, user=rev['user'], date=commit_date)
+		# commands.commit(self.ui, self.repo, message=commit_msg, user=rev['user'], date=commit_date)
 		self.rev_no += 1
 
 		self.saveState() # Update operation state
